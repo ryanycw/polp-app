@@ -1,13 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import {
   Dialog,
   DialogContent,
@@ -16,28 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
 
 const formSchema = z.object({
-  title: z.string().min(2, {
-    message: "Title must be at least 2 characters.",
-  }),
-  description: z.string().optional(),
-  event_date: z.date({
-    required_error: "Please select a date.",
-  }),
-  location: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal("")),
+  slugOrUrl: z.string().min(1, "Please enter a Luma event URL or slug."),
 })
 
 interface AddEventModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddEvent: (event: any) => void
+  onAddEvent: (event: { slugOrUrl: string }) => void
 }
 
 export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProps) {
@@ -46,116 +32,51 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      location: "",
-      image_url: "",
+      slugOrUrl: "",
     },
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
-
-    const newEvent = {
-      ...values,
-      event_date: values.event_date.toISOString(),
+    const slug = extractLumaSlug(values.slugOrUrl)
+    if (!slug) {
+      alert("Please enter a valid Luma event URL or slug.")
+      return
     }
-
-    onAddEvent(newEvent)
+    onAddEvent({ slugOrUrl: slug })
     form.reset()
     setIsSubmitting(false)
   }
 
+  function extractLumaSlug(urlOrSlug: string): string | null {
+    // Try to match a slug from a Luma URL
+    const match = urlOrSlug.trim().match(/(?:https?:\/\/)?(?:www\.)?lu\.ma\/([a-zA-Z0-9\-]+)/)
+    if (match) return match[1]
+    // If not a URL, assume it's a slug
+    if (/^[a-zA-Z0-9\-]+$/.test(urlOrSlug.trim())) return urlOrSlug.trim()
+    return null
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Luma Event</DialogTitle>
           <DialogDescription>
-            Create a new Luma event. Fill out the form below to add it to your dashboard.
+            Enter the Luma event URL or slug to add it to your dashboard.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="title"
+              name="slugOrUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Title</FormLabel>
+                  <FormLabel>Luma Event URL or Slug</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter event title" {...field} />
+                    <Input placeholder="e.g. https://lu.ma/9og6xeq4 or 9og6xeq4" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter event description" className="resize-none" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="event_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Event Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Virtual or physical location" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="image_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/image.jpg" {...field} />
-                  </FormControl>
-                  <FormDescription>Optional: Add an image for your event</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -166,7 +87,7 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Event"}
+                {isSubmitting ? "Adding..." : "Add Event"}
               </Button>
             </DialogFooter>
           </form>
