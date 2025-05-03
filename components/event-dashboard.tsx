@@ -40,34 +40,63 @@ export function EventDashboard() {
     }
   }
 
-  async function handleAddEvent(newEvent: any) {
+  function extractLumaSlug(urlOrSlug: string): string | null {
+    // Try to match a slug from a Luma URL
+    const match = urlOrSlug.trim().match(/(?:https?:\/\/)?(?:www\.)?lu\.ma\/([a-zA-Z0-9\-]+)/)
+    if (match) return match[1]
+    // If not a URL, assume it's a slug
+    if (/^[a-zA-Z0-9\-]+$/.test(urlOrSlug.trim())) return urlOrSlug.trim()
+    return null
+  }
+
+  async function handleAddEvent({ slugOrUrl }: { slugOrUrl: string }) {
+    const slug = extractLumaSlug(slugOrUrl)
+    if (!slug) {
+      alert("Please enter a valid Luma event URL or slug.")
+      return
+    }
+
     try {
+      const res = await fetch('/api/luma', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slug }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        alert(error.error || 'Failed to fetch event')
+        return
+      }
+
+      const { event } = await res.json()
+
+      // Insert into Supabase
       const { data, error } = await supabase
-        .from('luma_events')
-        .insert([
-          {
-            title: newEvent.title,
-            description: newEvent.description,
-            start_date: new Date(newEvent.event_date).toISOString(),
-            end_date: new Date(newEvent.event_date).toISOString(), // Using same date for simplicity
-            location: newEvent.location,
-            image_url: newEvent.image_url,
-          },
-        ])
+        .from("luma_events")
+        .insert([{
+          api_id: event.api_id,
+          name: event.name,
+          slug: event.slug,
+          cover_url: event.cover_url,
+          start_at: event.start_at,
+          end_at: event.end_at,
+        }])
         .select() as { data: LumaEvent[] | null; error: any }
 
       if (error) {
         console.error("Error adding event:", error)
         return
       }
-
       if (data) {
         setLumaEvents([...data, ...lumaEvents])
       }
-
       setIsModalOpen(false)
     } catch (error) {
       console.error("Error adding event:", error)
+      alert("Failed to add event")
     }
   }
 
