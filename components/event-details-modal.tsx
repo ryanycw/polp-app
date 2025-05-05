@@ -1,8 +1,10 @@
+"use client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ExternalLink, Copy, Mail } from "lucide-react"
 import type { LumaEvent } from "@/types/luma-event"
 import { useState } from "react"
+import { signIn, useSession } from "next-auth/react"
 
 interface EventDetailsModalProps {
   event: LumaEvent
@@ -13,11 +15,19 @@ interface EventDetailsModalProps {
 export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalProps) {
   const [copied, setCopied] = useState(false)
   const emailQuery = `from:mail.anthropic.com`
+  const { data: session } = useSession()
 
   const handleCopy = () => {
     navigator.clipboard.writeText(emailQuery)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function fetchEmails() {
+    const res = await fetch("/api/gmail-query");
+    const data = await res.json();
+    // data.messages will be an array of message objects (IDs)
+    console.log(data);
   }
 
   return (
@@ -58,9 +68,12 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
             </Button>
             {copied && <span className="text-xs text-green-600 ml-1">Copied!</span>}
           </div>
-          <Button className="w-full flex items-center justify-center gap-2 bg-black hover:bg-neutral-800 text-white">
+          <Button
+            className="w-full flex items-center justify-center gap-2 bg-black hover:bg-neutral-800 text-white"
+            onClick={() => signIn("google")}
+          >
             <Mail className="h-5 w-5" />
-            Connect Gmail Account
+            {session ? "Connected" : "Connect Gmail Account"}
           </Button>
         </div>
       </DialogContent>
