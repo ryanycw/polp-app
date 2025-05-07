@@ -15,6 +15,7 @@ interface EventDetailsModalProps {
 export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalProps) {
   const { data: session, status } = useSession()
   const [emails, setEmails] = useState<any[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -25,11 +26,10 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
     typeof session.accessToken === "string" &&
     session.accessToken.length > 0;
 
-  const fetchEmails = async () => {
+  const fetchEmails = async (pageToken?: string) => {
     setLoadingEmails(true);
     setError(null);
 
-    // Check session validity before querying
     if (!isSessionValid()) {
       setLoadingEmails(false);
       setEmails([]);
@@ -37,17 +37,22 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
       return;
     }
 
-    const res = await fetch(`/api/email?eventName=${encodeURIComponent(event.name)}`);
+    const url = `/api/email?eventName=${encodeURIComponent(event.name)}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+    const res = await fetch(url);
     if (res.status === 401) {
       setLoadingEmails(false);
       setEmails([]);
       setError("Session expired or invalid. Please sign in again.");
-      // Optionally, sign out to clear session
       await signOut({ redirect: false });
       return;
     }
     const data = await res.json();
-    setEmails(data.emails || []);
+    if (pageToken) {
+      setEmails((prev) => [...prev, ...(data.emails || [])]);
+    } else {
+      setEmails(data.emails || []);
+    }
+    setNextPageToken(data.nextPageToken || null);
     setLoadingEmails(false);
   };
 
@@ -61,6 +66,12 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
   const handleSignIn = async () => {
     await signIn("google");
   }
+
+  const handleLoadMore = () => {
+    if (nextPageToken) {
+      fetchEmails(nextPageToken);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,7 +121,7 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={fetchEmails}
+                  onClick={() => fetchEmails()}
                   disabled={loadingEmails}
                   className="flex items-center gap-1"
                 >
@@ -133,29 +144,43 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
             <p className="text-sm text-muted-foreground mb-1">
               Choose the emails you want to create proofs for.
             </p>
-            <p className="text-xs text-muted-foreground mb-3">
+            {/* <p className="text-xs text-muted-foreground mb-3">
               <strong>Note</strong> – If you select to create the proofs remotely, your emails will be sent to our secured service for proof generation. Emails will be deleted once the proofs are generated
-            </p>
-            <div className="overflow-x-auto">
-              {loadingEmails && <div>Loading emails...</div>}
-              {error && (
-                <div className="text-red-600 my-2">
-                  {error}
-                  <Button onClick={() => signIn("google")}>Sign in again</Button>
-                </div>
-              )}
-              {emails.length === 0 ? (
-                <div className="text-center py-4">No emails found.</div>
-              ) : (
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="px-2 py-2 text-left">Sent on</th>
-                      <th className="px-2 py-2 text-left">Subject</th>
+            </p> */}
+            <div className="overflow-x-auto min-w-[350px] min-h-[120px] mt-4">
+              <table className="min-w-full text-sm table-fixed">
+                <colgroup>
+                  <col style={{ width: "40%" }} />
+                  <col style={{ width: "60%" }} />
+                </colgroup>
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-2 py-2 text-left">Sent on</th>
+                    <th className="px-2 py-2 text-left">Subject</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingEmails ? (
+                    <tr>
+                      <td colSpan={2} className="py-2 text-center text-muted-foreground" style={{ height: 48 }}>
+                        Loading emails...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {emails.map((email: any) => (
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={2} className="py-4 text-center text-red-600">
+                        {error}
+                        <div>
+                          <Button onClick={() => signIn("google")}>Sign in again</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : emails.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="text-center py-4">No emails found.</td>
+                    </tr>
+                  ) : (
+                    emails.map((email: any) => (
                       <tr key={email.id} className="border-b">
                         <td className="px-2 py-2 whitespace-nowrap">
                           {email.date
@@ -166,21 +191,23 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
                         </td>
                         <td className="px-2 py-2">{email.subject}</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
             {/* Optionally, add a "Load More Emails" button */}
-            <div className="flex justify-center mt-4">
-              <button
-                className="flex items-center gap-2 text-muted-foreground hover:underline"
-                // onClick={handleLoadMore}
-                disabled
-              >
-                <span className="animate-spin">⟳</span> Load More Emails
-              </button>
-            </div>
+            {nextPageToken && emails.length >= 1 && (
+              <div className="flex justify-center mt-4">
+                <button
+                  className="flex items-center gap-2 text-muted-foreground hover:underline"
+                  onClick={handleLoadMore}
+                  disabled={loadingEmails}
+                >
+                  {loadingEmails ? <span className="animate-spin">⟳</span> : <span>⟳</span>} Load More Emails
+                </button>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
