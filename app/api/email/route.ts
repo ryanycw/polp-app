@@ -30,6 +30,7 @@ export async function GET(req: Request) {
   }
 
   const listData = await listRes.json();
+  const nextPageToken = listData.nextPageToken || null;
   if (!listData.messages) return NextResponse.json({ emails: [] });
 
   // Fetch details for each message (limit to 10 for demo)
@@ -53,5 +54,5 @@ export async function GET(req: Request) {
     })
   );
 
-  return NextResponse.json({ emails });
+  return NextResponse.json({ emails, nextPageToken });
 }
