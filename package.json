@@ -16,6 +16,7 @@
     "@radix-ui/react-toast": "^1.2.11",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@zk-email/sdk": "^0.0.139",
     "autoprefixer": "10.4.20",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
