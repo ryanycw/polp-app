@@ -150,25 +150,27 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
             <div className="overflow-x-auto min-w-[350px] min-h-[120px] mt-4">
               <table className="min-w-full text-sm table-fixed">
                 <colgroup>
-                  <col style={{ width: "40%" }} />
-                  <col style={{ width: "60%" }} />
+                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "50%" }} />
+                  <col style={{ width: "20%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b">
                     <th className="px-2 py-2 text-left">Sent on</th>
                     <th className="px-2 py-2 text-left">Subject</th>
+                    <th className="px-2 py-2 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingEmails ? (
                     <tr>
-                      <td colSpan={2} className="py-2 text-center text-muted-foreground" style={{ height: 48 }}>
+                      <td colSpan={3} className="py-2 text-center text-muted-foreground" style={{ height: 48 }}>
                         Loading emails...
                       </td>
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan={2} className="py-4 text-center text-red-600">
+                      <td colSpan={3} className="py-4 text-center text-red-600">
                         {error}
                         <div>
                           <Button onClick={() => signIn("google")}>Sign in again</Button>
@@ -177,7 +179,7 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
                     </tr>
                   ) : emails.length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="text-center py-4">No emails found.</td>
+                      <td colSpan={3} className="text-center py-4">No emails found.</td>
                     </tr>
                   ) : (
                     emails.map((email: any) => (
@@ -190,6 +192,18 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
                             : ""}
                         </td>
                         <td className="px-2 py-2">{email.subject}</td>
+                        <td className="px-2 py-2 text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // TODO: Implement proof generation
+                              console.log('Generate proof for email:', email.id);
+                            }}
+                          >
+                            Prove
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   )}
