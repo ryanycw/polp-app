@@ -52,7 +52,7 @@ export function EventDashboard() {
   async function handleAddEvent({ slugOrUrl }: { slugOrUrl: string }) {
     const slug = extractLumaSlug(slugOrUrl)
     if (!slug) {
-      alert("Please enter a valid Luma event URL or slug.")
+      alert("Please enter a valid Luma event URL.")
       return
     }
 
@@ -103,7 +103,7 @@ export function EventDashboard() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Luma Events</h2>
+        <h2 className="text-xl font-semibold">Events</h2>
         <Button onClick={() => setIsModalOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Event
