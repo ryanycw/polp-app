@@ -49,7 +49,7 @@ export function EventDashboard() {
     return null
   }
 
-  async function handleAddEvent({ slugOrUrl }: { slugOrUrl: string }) {
+  async function handleAddEvent({ slugOrUrl, poapMintLink }: { slugOrUrl: string; poapMintLink: string }) {
     const slug = extractLumaSlug(slugOrUrl)
     if (!slug) {
       alert("Please enter a valid Luma event URL.")
@@ -83,6 +83,7 @@ export function EventDashboard() {
           cover_url: event.cover_url,
           start_at: event.start_at,
           end_at: event.end_at,
+          poap_mint_link: poapMintLink,
         }])
         .select() as { data: LumaEvent[] | null; error: any }
 

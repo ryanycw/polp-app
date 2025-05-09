@@ -17,13 +17,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 
 const formSchema = z.object({
-  slugOrUrl: z.string().min(1, "Please enter a Luma event URL or slug."),
+  slugOrUrl: z.string().url("Please enter a valid Luma event URL.").min(1, "Luma event URL is required"),
+  poapMintLink: z.string().url("Please enter a valid POAP mint URL").min(1, "POAP mint link is required"),
 })
 
 interface AddEventModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddEvent: (event: { slugOrUrl: string }) => void
+  onAddEvent: (event: { slugOrUrl: string; poapMintLink: string }) => void
 }
 
 export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProps) {
@@ -33,6 +34,7 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
     resolver: zodResolver(formSchema),
     defaultValues: {
       slugOrUrl: "",
+      poapMintLink: "",
     },
   })
 
@@ -40,10 +42,10 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
     setIsSubmitting(true)
     const slug = extractLumaSlug(values.slugOrUrl)
     if (!slug) {
-      alert("Please enter a valid Luma event URL or slug.")
+      alert("Please enter a valid Luma event URL.")
       return
     }
-    onAddEvent({ slugOrUrl: slug })
+    onAddEvent({ slugOrUrl: slug, poapMintLink: values.poapMintLink })
     form.reset()
     setIsSubmitting(false)
   }
@@ -63,7 +65,7 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
         <DialogHeader>
           <DialogTitle>Add New Luma Event</DialogTitle>
           <DialogDescription>
-            Enter the Luma event URL or slug to add it to your dashboard.
+            Enter the Luma event URL and POAP mint link to add it to your dashboard.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -73,9 +75,23 @@ export function AddEventModal({ isOpen, onClose, onAddEvent }: AddEventModalProp
               name="slugOrUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Luma Event URL or Slug</FormLabel>
+                  <FormLabel>Luma Event URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. https://lu.ma/9og6xeq4 or 9og6xeq4" {...field} />
+                    <Input placeholder="e.g. https://lu.ma/9og6xeq4" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="poapMintLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>POAP Mint Link</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. https://poap.xyz/claim/abc123" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

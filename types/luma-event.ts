@@ -7,5 +7,6 @@ export interface LumaEvent {
   start_at: string
   end_at: string
   created_at: string
+  poap_mint_link: string | null
 }
   
