@@ -5,6 +5,8 @@ import { ExternalLink, Mail } from "lucide-react"
 import type { LumaEvent } from "@/types/luma-event"
 import { useState, useEffect } from "react"
 import { signIn, signOut, useSession } from "next-auth/react"
+import zkeSDK from "@zk-email/sdk"
+import { useToast } from "@/components/ui/use-toast"
 
 interface EventDetailsModalProps {
   event: LumaEvent
@@ -18,6 +20,8 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingProof, setGeneratingProof] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Helper to check if session and accessToken are valid
   const isSessionValid = () =>
@@ -70,6 +74,54 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
   const handleLoadMore = () => {
     if (nextPageToken) {
       fetchEmails(nextPageToken);
+    }
+  };
+
+  const handleGenerateProof = async (email: any) => {
+    if (!email.raw) {
+      toast({
+        title: "Error",
+        description: "Email raw data not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingProof(email.id);
+    try {
+      const sdk = zkeSDK();
+      const blueprint = await sdk.getBlueprint("ryanycw/proof_of_defi_tldr@v1");
+      const prover = blueprint.createProver();
+      
+      // Generate the proof
+      const proof = await prover.generateProof(email.raw);
+      
+      // Verify the proof off chain
+      const verification = await blueprint.verifyProof(proof);
+      
+      if (verification) {
+        toast({
+          title: "Success",
+          description: "Proof generated and verified successfully",
+        });
+        // TODO: Handle the proof (e.g., store it, send it to a contract, etc.)
+        console.log("Generated proof:", proof);
+      } else {
+        toast({
+          title: "Error",
+          description: "Proof verification failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating proof:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate proof",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingProof(null);
     }
   };
 
@@ -196,12 +248,10 @@ export function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalP
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              // TODO: Implement proof generation
-                              console.log('Generate proof for email:', email.id);
-                            }}
+                            onClick={() => handleGenerateProof(email)}
+                            disabled={generatingProof === email.id}
                           >
-                            Prove
+                            {generatingProof === email.id ? "Generating..." : "Prove"}
                           </Button>
                         </td>
                       </tr>
